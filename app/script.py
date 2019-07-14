@@ -1,5 +1,6 @@
 import praw
 import os
+import time
 
 from collections import Counter
 
@@ -11,27 +12,25 @@ print('connected to reddit!')
 # Feel free to import client_id and client_secret however you wish on your machines.
 
 def related_subreddit(subr):
-    subreddit_list = []
-    visited_profile = set()
-    print('gathering subreddits...')
+    subreddit_count = Counter()
+    comment_authors = set()
+    print('gathering comments')
     for submission in reddit.subreddit(subr).hot(limit=10):
         if not submission.comments:
             continue
         for sub_comment in submission.comments:
-            redditor = sub_comment.author
-            if redditor:
-                if redditor.name in visited_profile:
-                    print(redditor.name)
-            if redditor and redditor.name not in visited_profile:
-                visited_profile.add(redditor.name)
-                for comment in redditor.comments.new(limit=20):
-                    if comment.subreddit.display_name != subr:
-                        subreddit_list.append(comment.subreddit.display_name)
-    print('converting to counter....')
-    subreddit_count = Counter(subreddit_list)
-    print(subreddit_count)
+            if sub_comment.author:
+                comment_authors.add(sub_comment.author)
+    print('gathering subreddits')
+    for redditor in comment_authors:
+        for comment in redditor.comments.new(limit=50):
+            if comment.subreddit.display_name != subr:
+                subreddit_count[comment.subreddit.display_name] += 1
+    print(subreddit_count.most_common(10))
     print(sum(subreddit_count.values()))
-    print(len(visited_profile))
+    print(len(comment_authors))
 
 if __name__=="__main__":
+    start = time.time()
     related_subreddit('learnpython')
+    print('%s seconds' % (time.time()-start))
